@@ -1,6 +1,7 @@
 use regex::Regex;
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct User {
     id: Uuid,
     email: String,
@@ -14,6 +15,10 @@ impl User {
             email,
             password_hash,
         }
+    }
+
+    pub fn email(&self) -> &str {
+        &self.email
     }
 
     pub fn validate_email(email: &str) -> bool {
