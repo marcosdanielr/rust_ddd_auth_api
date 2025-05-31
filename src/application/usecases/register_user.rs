@@ -34,3 +34,49 @@ impl<'a> RegisterUserUseCase<'a> {
         Ok(new_user_data)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{
+        application::dtos::register_user_dto::RegisterUserDto,
+        infra::repositories::in_memory_user_repository::InMemoryUserRepository,
+    };
+
+    #[test]
+    fn test_register_user_use_case_success() {
+        let user_repository = InMemoryUserRepository::new();
+
+        let sut = RegisterUserUseCase::new(&user_repository);
+
+        let dto = RegisterUserDto {
+            email: "test@example.com".to_string(),
+            password: "12345678".to_string(),
+        };
+
+        let result = sut.execute(dto);
+
+        assert!(result.is_ok());
+        let user = result.unwrap();
+
+        let stored_user = user_repository.find_by_email(&user.email());
+        assert!(stored_user.is_some());
+
+        assert_eq!(stored_user.unwrap().email(), user.email());
+    }
+
+    #[test]
+    fn test_register_user_use_case_password_too_short() {
+        let user_repo = InMemoryUserRepository::new();
+        let use_case = RegisterUserUseCase::new(&user_repo);
+
+        let dto = RegisterUserDto {
+            email: "test@example.com".to_string(),
+            password: "1234".to_string(),
+        };
+
+        let result = use_case.execute(dto);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "Password to short".to_string());
+    }
+}

@@ -1,7 +1,7 @@
 use regex::Regex;
 use uuid::Uuid;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct User {
     id: Uuid,
     email: String,
