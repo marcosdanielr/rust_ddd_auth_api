@@ -24,3 +24,20 @@ impl User {
         password.len() >= 8
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_email() {
+        assert!(User::validate_email("test@example.com"));
+        assert!(!User::validate_email("invalid-email"));
+    }
+
+    #[test]
+    fn test_validate_password() {
+        assert!(User::validate_password("12345678"));
+        assert!(!User::validate_password("1234567"));
+    }
+}
