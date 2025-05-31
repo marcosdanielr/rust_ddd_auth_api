@@ -1,15 +1,16 @@
 use regex::Regex;
+use uuid::Uuid;
 
 pub struct User {
-    id: i32,
+    id: Uuid,
     email: String,
     password_hash: String,
 }
 
 impl User {
-    pub fn new(id: i32, email: String, password_hash: String) -> Self {
+    pub fn new(email: String, password_hash: String) -> Self {
         Self {
-            id,
+            id: Uuid::new_v4(),
             email,
             password_hash,
         }
@@ -28,6 +29,15 @@ impl User {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_create_user() {
+        let user = User::new("marcos@example.com".to_string(), "hash-example".to_string());
+
+        assert_eq!(user.id.get_version_num(), 4);
+        assert_eq!(user.email, "marcos@example.com");
+        assert_eq!(user.password_hash, "hash-example");
+    }
 
     #[test]
     fn test_validate_email() {
