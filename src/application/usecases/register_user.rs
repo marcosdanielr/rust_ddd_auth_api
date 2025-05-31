@@ -13,7 +13,7 @@ impl<'a> RegisterUserUseCase<'a> {
         Self { user_repository }
     }
 
-    pub fn execute(&self, data: RegisterUserDto) -> Result<(), String> {
+    pub fn execute(&self, data: RegisterUserDto) -> Result<User, String> {
         if !User::validate_email(&data.email) {
             return Err("Invalid email".to_string());
         }
@@ -27,11 +27,10 @@ impl<'a> RegisterUserUseCase<'a> {
 
         let new_user_data = User::new(data.email, password_hashed);
 
-        let _ = self
-            .user_repository
+        self.user_repository
             .create(&new_user_data)
-            .map_err(|e| "Failed to save user");
+            .map_err(|_| "Failed to save user".to_string())?;
 
-        Ok(())
+        Ok(new_user_data)
     }
 }
