@@ -1,4 +1,9 @@
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{
+    Json,
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+};
 use serde_json::json;
 
 use crate::{
@@ -19,7 +24,11 @@ pub async fn auth_handler(
     let auth_use_case = AuthenticateUseCase::new(&user_repo);
 
     match auth_use_case.execute(payload).await {
-        Ok(auth_response) => (StatusCode::OK, Json(auth_response)),
+        Ok(auth_response) => (
+            StatusCode::OK,
+            Json(json!({ "access_token": auth_response.access_token })),
+        )
+            .into_response(),
 
         Err(AuthError::InvalidCredentials) => (
             StatusCode::UNAUTHORIZED,
