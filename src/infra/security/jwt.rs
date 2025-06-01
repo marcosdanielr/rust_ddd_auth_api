@@ -47,9 +47,14 @@ impl JwtService {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
 
     #[test]
     fn test_generate_and_decode_token() {
+        unsafe {
+            env::set_var("JWT_SECRET", "my_secret_key_for_tests");
+        }
+
         let token_result = JwtService::generate_token("123");
         assert!(token_result.is_ok());
 
