@@ -17,8 +17,16 @@ impl User {
         }
     }
 
+    pub fn id(&self) -> &Uuid {
+        &self.id
+    }
+
     pub fn email(&self) -> &str {
         &self.email
+    }
+
+    pub fn password_hash(&self) -> &str {
+        &self.password_hash
     }
 
     pub fn validate_email(email: &str) -> bool {
