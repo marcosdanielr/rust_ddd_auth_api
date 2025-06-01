@@ -11,6 +11,7 @@ pub struct InMemoryUserRepository {
 }
 
 impl InMemoryUserRepository {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             users: Arc::new(Mutex::new(vec![])),
