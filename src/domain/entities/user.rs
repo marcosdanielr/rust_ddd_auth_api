@@ -17,6 +17,14 @@ impl User {
         }
     }
 
+    pub fn new_with_id(id: Uuid, email: String, password_hash: String) -> Self {
+        Self {
+            id,
+            email,
+            password_hash,
+        }
+    }
+
     pub fn id(&self) -> &Uuid {
         &self.id
     }
