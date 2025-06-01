@@ -4,6 +4,8 @@ use crate::{
     infra::security::{jwt::JwtService, password_hasher::PasswordHasher},
 };
 
+use super::errors::auth_error::AuthError;
+
 pub struct AuthenticateUseCase<'a> {
     user_repository: &'a dyn UserRepository,
 }
@@ -13,20 +15,22 @@ impl<'a> AuthenticateUseCase<'a> {
         Self { user_repository }
     }
 
-    pub async fn execute(&self, dto: AuthRequestDto) -> Result<AuthResponseDto, String> {
+    pub async fn execute(&self, dto: AuthRequestDto) -> Result<AuthResponseDto, AuthError> {
         let user = match self.user_repository.find_by_email(&dto.email).await {
             Some(user) => user,
-            None => return Err("Invalid credentials".to_string()),
+            None => return Err(AuthError::InvalidCredentials),
         };
 
         let is_valid_password =
-            PasswordHasher::verify_password(&dto.password, &user.password_hash())?;
+            PasswordHasher::verify_password(&dto.password, &user.password_hash())
+                .map_err(|_| AuthError::Unknown)?;
 
         if !is_valid_password {
-            return Err("Invalid credentials".to_string());
+            return Err(AuthError::InvalidCredentials);
         }
 
-        let token = JwtService::generate_token(user.id().to_string().as_str())?;
+        let token = JwtService::generate_token(user.id().to_string().as_str())
+            .map_err(|_| AuthError::Unknown)?;
 
         Ok(AuthResponseDto {
             access_token: token,
@@ -38,7 +42,7 @@ impl<'a> AuthenticateUseCase<'a> {
 mod tests {
     use crate::{
         domain::entities::user::User,
-        infra::repositories::in_memory_user_repository::InMemoryUserRepository,
+        infra::database::repositories::in_memory_user_repository::InMemoryUserRepository,
     };
 
     use super::*;

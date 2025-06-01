@@ -1,11 +1,13 @@
 use crate::{
-    application::dtos::register_user_dto::RegisterUserDto,
+    application::dtos::register_user_dto::RegisterUserRequestDto,
     domain::{
         entities::user::{self, User},
         repositories::user_repository::UserRepository,
     },
     infra::security::password_hasher::PasswordHasher,
 };
+
+use super::errors::user_error::UserError;
 
 pub struct RegisterUserUseCase<'a> {
     user_repository: &'a dyn UserRepository,
@@ -16,30 +18,30 @@ impl<'a> RegisterUserUseCase<'a> {
         Self { user_repository }
     }
 
-    pub async fn execute(&self, data: RegisterUserDto) -> Result<User, String> {
+    pub async fn execute(&self, data: RegisterUserRequestDto) -> Result<User, UserError> {
         if !User::validate_email(&data.email) {
-            return Err("Invalid email".to_string());
+            return Err(UserError::InvalidEmail);
         }
 
         if !User::validate_password(&data.password) {
-            return Err("Password too short".into());
+            return Err(UserError::PasswordShort);
         }
 
         let user_exists = self.user_repository.find_by_email(&data.email).await;
 
         if user_exists.is_some() {
-            return Err("User already exists".to_string());
+            return Err(UserError::UserExists);
         }
 
-        let password_hashed = PasswordHasher::hash_password(&data.password)
-            .map_err(|_| "Failed to hash password".to_string())?;
+        let password_hashed =
+            PasswordHasher::hash_password(&data.password).map_err(|_| UserError::Unknown)?;
 
         let new_user_data = User::new(data.email, password_hashed);
 
         self.user_repository
             .create(&new_user_data)
             .await
-            .map_err(|_| "Failed to save user".to_string())?;
+            .map_err(|_| UserError::Unknown)?;
 
         Ok(new_user_data)
     }
@@ -49,8 +51,8 @@ impl<'a> RegisterUserUseCase<'a> {
 mod tests {
     use super::*;
     use crate::{
-        application::dtos::register_user_dto::RegisterUserDto,
-        infra::repositories::in_memory_user_repository::InMemoryUserRepository,
+        application::dtos::register_user_dto::RegisterUserRequestDto,
+        infra::database::repositories::in_memory_user_repository::InMemoryUserRepository,
     };
 
     #[tokio::test]
@@ -58,7 +60,7 @@ mod tests {
         let user_repository = InMemoryUserRepository::new();
         let sut = RegisterUserUseCase::new(&user_repository);
 
-        let dto = RegisterUserDto {
+        let dto = RegisterUserRequestDto {
             email: "test@example.com".to_string(),
             password: "12345678".to_string(),
         };
@@ -79,14 +81,17 @@ mod tests {
         let user_repo = InMemoryUserRepository::new();
         let sut = RegisterUserUseCase::new(&user_repo);
 
-        let dto = RegisterUserDto {
+        let dto = RegisterUserRequestDto {
             email: "test@example.com".to_string(),
             password: "1234".to_string(),
         };
 
         let result = sut.execute(dto).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Password too short".to_string());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            UserError::PasswordShort.to_string()
+        );
     }
 
     #[tokio::test]
@@ -95,7 +100,7 @@ mod tests {
         let sut = RegisterUserUseCase::new(&user_repo);
 
         let result = sut
-            .execute(RegisterUserDto {
+            .execute(RegisterUserRequestDto {
                 email: "test@example.com".to_string(),
                 password: "123456789".to_string(),
             })
@@ -104,13 +109,16 @@ mod tests {
         assert!(result.is_ok());
 
         let result = sut
-            .execute(RegisterUserDto {
+            .execute(RegisterUserRequestDto {
                 email: "test@example.com".to_string(),
                 password: "2342343245".to_string(),
             })
             .await;
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "User already exists".to_string());
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            UserError::UserExists.to_string()
+        );
     }
 }
