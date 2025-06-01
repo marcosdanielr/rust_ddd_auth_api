@@ -68,14 +68,14 @@ mod tests {
     #[test]
     fn test_register_user_use_case_password_too_short() {
         let user_repo = InMemoryUserRepository::new();
-        let use_case = RegisterUserUseCase::new(&user_repo);
+        let sut = RegisterUserUseCase::new(&user_repo);
 
         let dto = RegisterUserDto {
             email: "test@example.com".to_string(),
             password: "1234".to_string(),
         };
 
-        let result = use_case.execute(dto);
+        let result = sut.execute(dto);
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Password to short".to_string());
     }
