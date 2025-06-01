@@ -2,7 +2,10 @@ use jsonwebtoken::{
     Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation, decode, encode,
 };
 use serde::{Deserialize, Serialize};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{
+    env,
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
@@ -10,7 +13,9 @@ pub struct Claims {
     pub exp: usize,
 }
 
-const JWT_SECRET: &str = "secret";
+fn jwt_secret() -> String {
+    std::env::var("JWT_SECRET").expect("JWT_SECRET must be set in .env file")
+}
 
 pub struct JwtService;
 
@@ -27,7 +32,7 @@ impl JwtService {
         encode(
             &Header::default(),
             &claims,
-            &EncodingKey::from_secret(JWT_SECRET.as_ref()),
+            &EncodingKey::from_secret(jwt_secret().as_ref()),
         )
         .map_err(|e| e.to_string())
     }
@@ -35,7 +40,7 @@ impl JwtService {
     pub fn decode(token: &str) -> Result<Claims, String> {
         match decode::<Claims>(
             token,
-            &DecodingKey::from_secret(JWT_SECRET.as_ref()),
+            &DecodingKey::from_secret(jwt_secret().as_ref()),
             &Validation::new(Algorithm::HS256),
         ) {
             Ok(token_data) => Ok(token_data.claims),
