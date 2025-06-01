@@ -29,12 +29,10 @@ impl<'a> AuthenticateUseCase<'a> {
             return Err(AuthError::InvalidCredentials);
         }
 
-        let token = JwtService::generate_token(user.id().to_string().as_str())
+        let access_token = JwtService::generate_token(user.id().to_string().as_str())
             .map_err(|_| AuthError::Unknown)?;
 
-        Ok(AuthResponseDto {
-            access_token: token,
-        })
+        Ok(AuthResponseDto { access_token })
     }
 }
 
