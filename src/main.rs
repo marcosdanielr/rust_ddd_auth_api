@@ -4,7 +4,7 @@ mod infra;
 
 mod state;
 
-use application::http::routes::auth::auth_routes;
+use application::http::routes::{auth::auth_routes, users::users_routes};
 use infra::database::connection::establish_db_connection;
 
 use axum::Router;
@@ -16,7 +16,9 @@ async fn main() {
 
     let app_state = AppState { db: db.into() };
 
-    let app = Router::new().nest("/api/auth", auth_routes().with_state(app_state));
+    let app = Router::new()
+        .nest("/api/auth", auth_routes().with_state(app_state.clone()))
+        .nest("/api/users", users_routes().with_state(app_state.clone()));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();

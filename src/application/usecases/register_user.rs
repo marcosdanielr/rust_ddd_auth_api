@@ -1,9 +1,6 @@
 use crate::{
-    application::dtos::register_user_dto::RegisterUserRequestDto,
-    domain::{
-        entities::user::{self, User},
-        repositories::user_repository::UserRepository,
-    },
+    application::dtos::register_user_dto::{RegisterUserRequestDto, RegisterUserResponseDto},
+    domain::{entities::user::User, repositories::user_repository::UserRepository},
     infra::security::password_hasher::PasswordHasher,
 };
 
@@ -18,7 +15,10 @@ impl<'a> RegisterUserUseCase<'a> {
         Self { user_repository }
     }
 
-    pub async fn execute(&self, data: RegisterUserRequestDto) -> Result<User, UserError> {
+    pub async fn execute(
+        &self,
+        data: RegisterUserRequestDto,
+    ) -> Result<RegisterUserResponseDto, UserError> {
         if !User::validate_email(&data.email) {
             return Err(UserError::InvalidEmail);
         }
@@ -43,7 +43,10 @@ impl<'a> RegisterUserUseCase<'a> {
             .await
             .map_err(|_| UserError::Unknown)?;
 
-        Ok(new_user_data)
+        Ok(RegisterUserResponseDto {
+            id: new_user_data.id().clone(),
+            email: new_user_data.email().to_string(),
+        })
     }
 }
 
@@ -70,10 +73,10 @@ mod tests {
         assert!(result.is_ok());
         let user = result.unwrap();
 
-        let stored_user = user_repository.find_by_email(&user.email()).await;
+        let stored_user = user_repository.find_by_email(&user.email).await;
         assert!(stored_user.is_some());
 
-        assert_eq!(stored_user.unwrap().email(), user.email());
+        assert_eq!(stored_user.unwrap().email(), user.email);
     }
 
     #[tokio::test]
