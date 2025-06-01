@@ -5,9 +5,9 @@ use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Claims {
-    sub: String,
-    exp: usize,
+pub struct Claims {
+    pub sub: String,
+    pub exp: usize,
 }
 
 const JWT_SECRET: &str = "secret";
@@ -33,13 +33,14 @@ impl JwtService {
     }
 
     pub fn decode(token: &str) -> Result<Claims, String> {
-        let decoded = decode::<Claims>(
+        match decode::<Claims>(
             token,
             &DecodingKey::from_secret(JWT_SECRET.as_ref()),
             &Validation::new(Algorithm::HS256),
-        );
-
-        Ok(decoded.unwrap().claims)
+        ) {
+            Ok(token_data) => Ok(token_data.claims),
+            Err(err) => Err(err.to_string()),
+        }
     }
 }
 
