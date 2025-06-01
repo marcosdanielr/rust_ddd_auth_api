@@ -13,8 +13,8 @@ impl<'a> AuthenticateUseCase<'a> {
         Self { user_repository }
     }
 
-    pub fn execute(&self, dto: AuthRequestDto) -> Result<AuthResponseDto, String> {
-        let user = match self.user_repository.find_by_email(&dto.email) {
+    pub async fn execute(&self, dto: AuthRequestDto) -> Result<AuthResponseDto, String> {
+        let user = match self.user_repository.find_by_email(&dto.email).await {
             Some(user) => user,
             None => return Err("Invalid credentials".to_string()),
         };
@@ -43,8 +43,8 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn test_authenticate_user_use_case_success() {
+    #[tokio::test]
+    async fn test_authenticate_user_use_case_success() {
         let user_repository = InMemoryUserRepository::new();
 
         let sut = AuthenticateUseCase::new(&user_repository);
@@ -54,14 +54,14 @@ mod tests {
             PasswordHasher::hash_password("password").unwrap(),
         );
 
-        user_repository.create(&user).unwrap();
+        user_repository.create(&user).await.unwrap();
 
         let auth_request = AuthRequestDto {
             email: "test@example.com".to_string(),
             password: "password".to_string(),
         };
 
-        let result = sut.execute(auth_request);
+        let result = sut.execute(auth_request).await;
 
         assert!(result.is_ok());
 
@@ -69,8 +69,8 @@ mod tests {
         assert!(!response.access_token.is_empty());
     }
 
-    #[test]
-    fn test_authenticate_user_use_case_invalid_credentials() {
+    #[tokio::test]
+    async fn test_authenticate_user_use_case_invalid_credentials() {
         let user_repository = InMemoryUserRepository::new();
 
         let user = User::new(
@@ -78,7 +78,7 @@ mod tests {
             PasswordHasher::hash_password("password").unwrap(),
         );
 
-        user_repository.create(&user).unwrap();
+        user_repository.create(&user).await.unwrap();
 
         let sut = AuthenticateUseCase::new(&user_repository);
 
@@ -87,7 +87,7 @@ mod tests {
             password: "wrong-password".to_string(),
         };
 
-        let mut result = sut.execute(auth_request);
+        let mut result = sut.execute(auth_request).await;
 
         assert!(result.is_err());
 
@@ -96,7 +96,7 @@ mod tests {
             password: "password".to_string(),
         };
 
-        result = sut.execute(auth_request);
+        result = sut.execute(auth_request).await;
 
         assert!(result.is_err());
     }

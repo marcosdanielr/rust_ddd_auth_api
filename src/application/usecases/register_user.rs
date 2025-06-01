@@ -13,7 +13,7 @@ impl<'a> RegisterUserUseCase<'a> {
         Self { user_repository }
     }
 
-    pub fn execute(&self, data: RegisterUserDto) -> Result<User, String> {
+    pub async fn execute(&self, data: RegisterUserDto) -> Result<User, String> {
         if !User::validate_email(&data.email) {
             return Err("Invalid email".to_string());
         }
@@ -29,6 +29,7 @@ impl<'a> RegisterUserUseCase<'a> {
 
         self.user_repository
             .create(&new_user_data)
+            .await
             .map_err(|_| "Failed to save user".to_string())?;
 
         Ok(new_user_data)
@@ -43,10 +44,9 @@ mod tests {
         infra::repositories::in_memory_user_repository::InMemoryUserRepository,
     };
 
-    #[test]
-    fn test_register_user_use_case_success() {
+    #[tokio::test]
+    async fn test_register_user_use_case_success() {
         let user_repository = InMemoryUserRepository::new();
-
         let sut = RegisterUserUseCase::new(&user_repository);
 
         let dto = RegisterUserDto {
@@ -54,19 +54,19 @@ mod tests {
             password: "12345678".to_string(),
         };
 
-        let result = sut.execute(dto);
+        let result = sut.execute(dto).await;
 
         assert!(result.is_ok());
         let user = result.unwrap();
 
-        let stored_user = user_repository.find_by_email(&user.email());
+        let stored_user = user_repository.find_by_email(&user.email()).await;
         assert!(stored_user.is_some());
 
         assert_eq!(stored_user.unwrap().email(), user.email());
     }
 
-    #[test]
-    fn test_register_user_use_case_password_too_short() {
+    #[tokio::test]
+    async fn test_register_user_use_case_password_too_short() {
         let user_repo = InMemoryUserRepository::new();
         let sut = RegisterUserUseCase::new(&user_repo);
 
@@ -75,8 +75,8 @@ mod tests {
             password: "1234".to_string(),
         };
 
-        let result = sut.execute(dto);
+        let result = sut.execute(dto).await;
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Password to short".to_string());
+        assert_eq!(result.unwrap_err(), "Password too short".to_string());
     }
 }
