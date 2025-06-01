@@ -1,6 +1,9 @@
 use crate::{
     application::dtos::register_user_dto::RegisterUserDto,
-    domain::{entities::user::User, repositories::user_repository::UserRepository},
+    domain::{
+        entities::user::{self, User},
+        repositories::user_repository::UserRepository,
+    },
     infra::security::password_hasher::PasswordHasher,
 };
 
@@ -19,7 +22,13 @@ impl<'a> RegisterUserUseCase<'a> {
         }
 
         if !User::validate_password(&data.password) {
-            return Err("Password to short".into());
+            return Err("Password too short".into());
+        }
+
+        let user_exists = self.user_repository.find_by_email(&data.email).await;
+
+        if user_exists.is_some() {
+            return Err("User already exists".to_string());
         }
 
         let password_hashed = PasswordHasher::hash_password(&data.password)
@@ -78,5 +87,30 @@ mod tests {
         let result = sut.execute(dto).await;
         assert!(result.is_err());
         assert_eq!(result.unwrap_err(), "Password too short".to_string());
+    }
+
+    #[tokio::test]
+    async fn test_register_user_use_case_email_exists() {
+        let user_repo = InMemoryUserRepository::new();
+        let sut = RegisterUserUseCase::new(&user_repo);
+
+        let result = sut
+            .execute(RegisterUserDto {
+                email: "test@example.com".to_string(),
+                password: "123456789".to_string(),
+            })
+            .await;
+
+        assert!(result.is_ok());
+
+        let result = sut
+            .execute(RegisterUserDto {
+                email: "test@example.com".to_string(),
+                password: "2342343245".to_string(),
+            })
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "User already exists".to_string());
     }
 }
