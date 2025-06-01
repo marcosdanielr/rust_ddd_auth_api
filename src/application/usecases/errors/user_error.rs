@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum UserError {
+pub enum RegisterUserError {
     #[error("Invalid email")]
     InvalidEmail,
 

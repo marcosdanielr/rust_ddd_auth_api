@@ -4,7 +4,7 @@ use serde_json::json;
 use crate::{
     application::{
         dtos::register_user_dto::RegisterUserRequestDto,
-        usecases::{errors::user_error::UserError, register_user::RegisterUserUseCase},
+        usecases::{errors::user_error::RegisterUserError, register_user::RegisterUserUseCase},
     },
     infra::database::repositories::seaorm_user_repository::SeaORMUserRepository,
     state::AppState,
@@ -21,23 +21,23 @@ pub async fn register_user_handler(
     match register_user_use_case.execute(payload).await {
         Ok(user_created) => (StatusCode::CREATED, Json(user_created)).into_response(),
 
-        Err(UserError::UserExists) => (
+        Err(RegisterUserError::UserExists) => (
             StatusCode::CONFLICT,
             Json(json!({ "message": "User already exists!" })),
         )
             .into_response(),
 
-        Err(UserError::PasswordShort) => (
+        Err(RegisterUserError::PasswordShort) => (
             StatusCode::BAD_REQUEST,
             Json(json!({ "message": "Password too short" })),
         )
             .into_response(),
-        Err(UserError::InvalidEmail) => (
+        Err(RegisterUserError::InvalidEmail) => (
             StatusCode::BAD_REQUEST,
             Json(json!({ "message": "Invalid email format" })),
         )
             .into_response(),
-        Err(UserError::Unknown) => (
+        Err(RegisterUserError::Unknown) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({ "message": "Internal server error" })),
         )

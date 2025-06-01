@@ -4,7 +4,7 @@ use crate::{
     infra::security::password_hasher::PasswordHasher,
 };
 
-use super::errors::user_error::UserError;
+use super::errors::user_error::RegisterUserError;
 
 pub struct RegisterUserUseCase<'a> {
     user_repository: &'a dyn UserRepository,
@@ -18,30 +18,30 @@ impl<'a> RegisterUserUseCase<'a> {
     pub async fn execute(
         &self,
         data: RegisterUserRequestDto,
-    ) -> Result<RegisterUserResponseDto, UserError> {
+    ) -> Result<RegisterUserResponseDto, RegisterUserError> {
         if !User::validate_email(&data.email) {
-            return Err(UserError::InvalidEmail);
+            return Err(RegisterUserError::InvalidEmail);
         }
 
         if !User::validate_password(&data.password) {
-            return Err(UserError::PasswordShort);
+            return Err(RegisterUserError::PasswordShort);
         }
 
         let user_exists = self.user_repository.find_by_email(&data.email).await;
 
         if user_exists.is_some() {
-            return Err(UserError::UserExists);
+            return Err(RegisterUserError::UserExists);
         }
 
-        let password_hashed =
-            PasswordHasher::hash_password(&data.password).map_err(|_| UserError::Unknown)?;
+        let password_hashed = PasswordHasher::hash_password(&data.password)
+            .map_err(|_| RegisterUserError::Unknown)?;
 
         let new_user_data = User::new(data.email, password_hashed);
 
         self.user_repository
             .create(&new_user_data)
             .await
-            .map_err(|_| UserError::Unknown)?;
+            .map_err(|_| RegisterUserError::Unknown)?;
 
         Ok(RegisterUserResponseDto {
             id: new_user_data.id().clone(),
@@ -93,7 +93,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            UserError::PasswordShort.to_string()
+            RegisterUserError::PasswordShort.to_string()
         );
     }
 
@@ -121,7 +121,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(
             result.unwrap_err().to_string(),
-            UserError::UserExists.to_string()
+            RegisterUserError::UserExists.to_string()
         );
     }
 }
